@@ -33,4 +33,3 @@ class RunnerTrainValTest:
                 self.optimizer.zero_grad()
 
             epoch_loss = epoch_loss / len(self.dataloader_dict["train"])
-            self.scheduler.step()

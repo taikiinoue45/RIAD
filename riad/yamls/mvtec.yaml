@@ -9,22 +9,31 @@ model:
 
 augs:
   train:
-    yaml: /app/STAD/stad/yamls/train_augmentations.yaml
+    yaml: /dgx/github/RIAD/riad/yamls/train_augs.yaml
+  val:
+    yaml: /dgx/github/RIAD/riad/yamls/train_augs.yaml
   test:
-    yaml: /app/STAD/stad/yamls/test_augmentations.yaml
+    yaml: /dgx/github/RIAD/riad/yamls/train_augs.yaml
 
 dataset:
   train:
     name: riad.datasets - MVTecDataset
     args:
-      root:
+      root: /dgx/github/RIAD/data
+      query_list:
+        - category == 'bottle' &
+          data_type == 'train'
+  val:
+    name: riad.datasets - MVTecDataset
+    args:
+      root: /dgx/github/RIAD/data
       query_list:
         - category == 'bottle' &
           data_type == 'train'
   test:
     name: riad.datasets - MVTecDataset
     args:
-      root:
+      root: /dgx/github/RIAD/data
       query_list:
         - category == 'bottle' &
           data_type == 'test'
@@ -33,7 +42,12 @@ dataloader:
   train:
     name: torch.utils.data - DataLoader
     args:
-      batch_size: 32
+      batch_size: 8
+      shuffle: True
+  val:
+    name: torch.utils.data - DataLoader
+    args:
+      batch_size: 1
       shuffle: True
   test:
     name: torch.utils.data - DataLoader
@@ -42,7 +56,7 @@ dataloader:
       shuffle: True
 
 optimizer:
-  name: Adam
+  name: torch.optim - Adam
   args:
     lr: 0.0001
     weight_decay: 0.00001
