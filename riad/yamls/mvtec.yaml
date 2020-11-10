@@ -1,0 +1,68 @@
+device: cuda:0
+
+model:
+  name: riad.models - UNet
+  args:
+    n_channels: 3
+    n_classes: 3
+    bilinear: True
+
+augs:
+  train:
+    yaml: /app/STAD/stad/yamls/train_augmentations.yaml
+  test:
+    yaml: /app/STAD/stad/yamls/test_augmentations.yaml
+
+dataset:
+  train:
+    name: riad.datasets - MVTecDataset
+    args:
+      root:
+      query_list:
+        - category == 'bottle' &
+          data_type == 'train'
+  test:
+    name: riad.datasets - MVTecDataset
+    args:
+      root:
+      query_list:
+        - category == 'bottle' &
+          data_type == 'test'
+
+dataloader:
+  train:
+    name: torch.utils.data - DataLoader
+    args:
+      batch_size: 32
+      shuffle: True
+  test:
+    name: torch.utils.data - DataLoader
+    args:
+      batch_size: 1
+      shuffle: True
+
+optimizer:
+  name: Adam
+  args:
+    lr: 0.0001
+    weight_decay: 0.00001
+
+criterion:
+  MSGM:
+    name: piq - MultiScaleGMSDLoss
+    args:
+      reduction: mean
+  SSIM:
+    name: piq - SSIMLoss
+    args:
+      kernel_size: 11
+      kernel_sigma: 1.5
+      reduction: mean
+  L2:
+    name: torch.nn - MSELoss
+    args:
+      reduction: mean
+
+run:
+  train:
+    epochs: 200
