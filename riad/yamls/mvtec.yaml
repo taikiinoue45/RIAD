@@ -8,12 +8,12 @@ model:
     bilinear: True
 
 augs:
-  train:
-    yaml: /dgx/github/RIAD/riad/yamls/train_augs.yaml
-  val:
-    yaml: /dgx/github/RIAD/riad/yamls/train_augs.yaml
-  test:
-    yaml: /dgx/github/RIAD/riad/yamls/train_augs.yaml
+  preprocess:
+    yaml: /dgx/github/RIAD/riad/yamls/augs/preprocess.yaml
+  cutout:
+    yaml: /dgx/github/RIAD/riad/yamls/augs/cutout.yaml
+  totensor:
+    yaml: /dgx/github/RIAD/riad/yamls/augs/totensor.yaml
 
 dataset:
   train:

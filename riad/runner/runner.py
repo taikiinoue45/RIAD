@@ -13,10 +13,12 @@ class Runner(RunnerInitialize, RunnerTrainValTest):
         self.log = logging.getLogger(__name__)
 
         self.augs_dict = {}
+        for augs_type in ["preprocess", "cutout", "totensor"]:
+            self.augs_dict[augs_type] = self.init_augs(augs_type)
+
         self.dataset_dict = {}
         self.dataloader_dict = {}
         for data_type in ["train", "val", "test"]:
-            self.augs_dict[data_type] = self.init_augs(data_type)
             self.dataset_dict[data_type] = self.init_dataset(data_type)
             self.dataloader_dict[data_type] = self.init_dataloader(data_type)
 

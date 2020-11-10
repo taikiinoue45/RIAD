@@ -17,11 +17,10 @@ class RunnerInitialize:
     dataset_dict: Dict[str, Dataset]
     model: Module
 
-    def init_augs(self, data_type: str) -> Compose:
+    def init_augs(self, augs_type: str) -> Compose:
 
-        cfg = self.cfg.augs[data_type]
+        cfg = self.cfg.augs[augs_type]
         augs = albu.load(cfg.yaml, data_format="yaml")
-        albu.save(augs, "hydra/augs.yaml", data_format="yaml")
         return augs
 
     def init_dataloader(self, data_type: str) -> DataLoader:
@@ -34,7 +33,7 @@ class RunnerInitialize:
 
         cfg = self.cfg.dataset[data_type]
         attr = self._get_attr(cfg.name)
-        return attr(**cfg.args, augs=self.augs_dict[data_type])
+        return attr(**cfg.args, augs_dict=self.augs_dict)
 
     def init_model(self) -> Module:
 

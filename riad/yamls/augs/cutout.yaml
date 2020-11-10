@@ -1,0 +1,14 @@
+__version__: 0.4.6
+transform:
+  __class_fullname__: albumentations.core.composition.Compose
+  additional_targets: {}
+  bbox_params: null
+  keypoint_params: null
+  p: 1.0
+  transforms:
+  - __class_fullname__: albumentations.augmentations.transforms.Cutout
+    always_apply: false
+    max_h_size: 8
+    max_w_size: 8
+    num_holes: 8
+    p: 1.0

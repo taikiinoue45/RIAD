@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import cv2
 import pandas as pd
@@ -8,10 +8,10 @@ from torch.utils.data import Dataset
 
 
 class MVTecDataset(Dataset):
-    def __init__(self, root: str, query_list: List[str], augs: Compose) -> None:
+    def __init__(self, root: str, query_list: List[str], augs_dict: Dict[str, Compose]) -> None:
 
         self.root = Path(root)
-        self.augs = augs
+        self.augs_dict = augs_dict
         self.stem_list = []
 
         df = pd.read_csv(self.root / "info.csv")
@@ -26,8 +26,15 @@ class MVTecDataset(Dataset):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         mask = cv2.imread(str(self.root / f"masks/{stem}.png"))
 
-        data_dict = self.augs(image=img, mask=mask)
-        data_dict["raw_image"] = img
+        raw_img = self.augs_dict["preprocess"](image=img)["image"]
+        raw_img = self.augs_dict["totensor"](image=raw_img)["image"]
+
+        data_dict = {"image": img, "mask": mask}
+        data_dict = self.augs_dict["preprocess"](**data_dict)
+        data_dict = self.augs_dict["cutout"](**data_dict)
+        data_dict = self.augs_dict["totensor"](**data_dict)
+
+        data_dict["raw_image"] = raw_img
         data_dict["stem"] = stem
         return data_dict
 

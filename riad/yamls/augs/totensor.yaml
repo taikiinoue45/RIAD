@@ -1,0 +1,11 @@
+__version__: 0.4.6
+transform:
+  __class_fullname__: albumentations.core.composition.Compose
+  additional_targets: {}
+  bbox_params: null
+  keypoint_params: null
+  p: 1.0
+  transforms:
+  - __class_fullname__: albumentations.pytorch.transforms.ToTensorV2
+    always_apply: true
+    p: 1.0
