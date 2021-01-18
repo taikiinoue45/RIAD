@@ -1,0 +1,69 @@
+params:
+  epochs: 200
+  device: cuda:0
+  cutout_size: 8
+  num_disjoint_masks: 3
+  category: bottle
+
+model:
+  name: riad.models - UNet
+  args:
+    n_channels: 3
+    n_classes: 3
+    bilinear: True
+
+preprocess:
+  train:
+    yaml: /dgx/github/RIAD/riad/transforms/transforms.yaml
+  val:
+    yaml: /dgx/github/RIAD/riad/transforms/transforms.yaml
+
+dataset:
+  train:
+    name: riad.datasets - MVTecDataset
+    args:
+      data_dir: /dgx/github/RIAD/data
+      query_list:
+      - mode=='train' & category=='${params.category}'
+      debug: False
+  val:
+    name: riad.datasets - MVTecDataset
+    args:
+      data_dir: /dgx/github/RIAD/data
+      query_list:
+      - mode=='test' & category=='${params.category}'
+      debug: false
+
+dataloader:
+  train:
+    name: torch.utils.data - DataLoader
+    args:
+      batch_size: 8
+      num_workers: 8
+      shuffle: True
+  val:
+    name: torch.utils.data - DataLoader
+    args:
+      batch_size: 8
+      num_workers: 8
+      shuffle: True
+
+optimizer:
+  name: torch.optim - Adam
+  args:
+    lr: 0.0001
+    weight_decay: 0.00001
+
+criterion:
+  MSGMS:
+    name: riad.criterions - MSGMS_Loss
+    args:
+  SSIM:
+    name: riad.criterions - SSIM_Loss
+    args:
+      window_size: 11
+      size_average: True
+  L2:
+    name: torch.nn - MSELoss
+    args:
+      reduction: mean

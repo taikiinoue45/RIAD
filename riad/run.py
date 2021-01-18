@@ -1,11 +1,12 @@
 import logging
-import os
 import sys
 
 import hydra
+import mlflow
 from omegaconf import DictConfig
 
 from riad.runner import Runner
+
 
 log = logging.getLogger(__name__)
 
@@ -16,10 +17,13 @@ sys.argv.pop(1)
 @hydra.main(config_path)
 def main(cfg: DictConfig) -> None:
 
-    os.rename(".hydra", "hydra")
+    mlflow.set_tracking_uri("databricks")
+    mlflow.set_experiment("/Users/inoue@nablas.com/riad")
+    mlflow.start_run(run_name=cfg.params.category)
+    mlflow.log_artifacts(".hydra", "hydra")
 
-    trainer = Runner(cfg)
-    trainer.run_train()
+    runner = Runner(cfg)
+    runner.run()
 
 
 if __name__ == "__main__":
