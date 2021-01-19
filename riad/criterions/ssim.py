@@ -12,17 +12,13 @@ class SSIMLoss(Module):
         self.sigma = sigma
         self.gaussian_kernel = self._create_gaussian_kernel(self.kernel_size, self.sigma)
 
-    def forward(self, x: Tensor, y: Tensor, is_inference: bool = False) -> Tensor:
+    def forward(self, x: Tensor, y: Tensor) -> Tensor:
 
         if not self.gaussian_kernel.is_cuda:
-            self.kernel = self.gaussian_kernel.to(f"cuda:{x.get_device()}")
+            self.gaussian_kernel = self.gaussian_kernel.to(f"cuda:{x.get_device()}")
 
         ssim_map = self._ssim(x, y)
-
-        if is_inference:
-            return ssim_map
-        else:
-            return ssim_map.mean()
+        return 1 - ssim_map.mean()
 
     def _ssim(self, x: Tensor, y: Tensor) -> Tensor:
 
@@ -42,7 +38,7 @@ class SSIMLoss(Module):
         c2 = 0.03 ** 2
         numerator = (2 * ux * uy + c1) * (2 * vxy + c2)
         denominator = (ux ** 2 + uy ** 2 + c1) * (vx + vy + c2)
-        return numerator / denominator
+        return numerator / (denominator + 1e-12)
 
     def _create_gaussian_kernel(self, kernel_size: int, sigma: float) -> Tensor:
 
@@ -50,7 +46,8 @@ class SSIMLoss(Module):
         end = (1 + kernel_size) / 2
         kernel_1d = torch.arange(start, end, step=1, dtype=torch.float)
         kernel_1d = torch.exp(-torch.pow(kernel_1d / sigma, 2) / 2)
-        kernel_1d = (kernel_1d / kernel_1d.sum()).unsqueeze(dim=0)  # (1, kernel_size)
+        kernel_1d = (kernel_1d / kernel_1d.sum()).unsqueeze(dim=0)
 
-        kernel_2d = torch.matmul(kernel_1d.t(), kernel_1d)  # (kernel_size, kernel_size)
-        return kernel_2d.expand(3, 1, kernel_size, kernel_size)  # (3, 1, kernel_size, kernel_size)
+        kernel_2d = torch.matmul(kernel_1d.t(), kernel_1d)
+        kernel_2d = kernel_2d.expand(3, 1, kernel_size, kernel_size).contiguous()
+        return kernel_2d
