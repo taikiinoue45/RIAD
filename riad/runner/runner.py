@@ -33,6 +33,9 @@ class Runner(BaseRunner):
     def _train(self, epoch: int) -> None:
 
         self.model.train()
+        ep_mse: List[float] = []
+        ep_msgms: List[float] = []
+        ep_ssim: List[float] = []
         ep_loss: List[float] = []
         for i, (p, mb_img, _) in enumerate(self.dataloader_dict["train"]):
 
@@ -42,13 +45,16 @@ class Runner(BaseRunner):
             cutout_size = random.choice(self.cfg.params.cutout_sizes)
             mb_reconst = self._reconstruct(mb_img, cutout_size)
 
-            mse_loss = self.criterion_dict["MSE"](mb_img, mb_reconst)
-            msgms_loss = self.criterion_dict["MSGMS"](mb_img, mb_reconst)
-            ssim_loss = self.criterion_dict["SSIM"](mb_img, mb_reconst)
-            mb_loss = msgms_loss + ssim_loss + mse_loss
+            mb_mse = self.criterion_dict["MSE"](mb_img, mb_reconst)
+            mb_msgms = self.criterion_dict["MSGMS"](mb_img, mb_reconst)
+            mb_ssim = self.criterion_dict["SSIM"](mb_img, mb_reconst)
+            mb_loss = mb_msgms + mb_ssim + mb_mse
             print(i, mb_loss)
 
             mb_loss.backward()
+            ep_mse.append(mb_mse.detach().cpu().item())
+            ep_msgms.append(mb_msgms.detach().cpu().item())
+            ep_ssim.append(mb_ssim.detach().cpu().item())
             ep_loss.append(mb_loss.detach().cpu().item())
             self.optimizer.step()
 
@@ -70,10 +76,11 @@ class Runner(BaseRunner):
                 for cutout_size in self.cfg.params.cutout_sizes:
                     mb_img = mb_img.to(self.cfg.params.device)
                     mb_reconst = self._reconstruct(mb_img, cutout_size)
-                    mb_score += msgms_score(mb_img, mb_reconst)
+                    mb_score += msgms_score(mb_img, mb_reconst) / (256 ** 2)
 
             mb_score = mb_score.squeeze().cpu().numpy()
-            mb_score = gaussian_filter(mb_score, sigma=7)
+            for i in range(len(mb_score)):
+                mb_score[i] = gaussian_filter(mb_score[i], sigma=7)
             ep_score.extend(mb_score)
 
             ep_img.extend(mb_img.permute(0, 2, 3, 1).detach().cpu().numpy())
