@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 
 use_cuda = torch.cuda.is_available()
-device = torch.device("cuda" if use_cuda else "cpu")
+device = torch.device("cuda:0" if use_cuda else "cpu")
 
 
 def gaussian(window_size, sigma):

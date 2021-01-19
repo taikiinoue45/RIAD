@@ -1,16 +1,13 @@
 params:
   epochs: 200
   device: cuda:0
-  cutout_size: 8
+  cutout_sizes: [2, 4, 8, 16]
   num_disjoint_masks: 3
-  category: bottle
+  category: zipper
 
 model:
   name: riad.models - UNet
   args:
-    n_channels: 3
-    n_classes: 3
-    bilinear: True
 
 preprocess:
   train:
@@ -38,13 +35,13 @@ dataloader:
   train:
     name: torch.utils.data - DataLoader
     args:
-      batch_size: 8
+      batch_size: 4
       num_workers: 8
       shuffle: True
   val:
     name: torch.utils.data - DataLoader
     args:
-      batch_size: 8
+      batch_size: 4
       num_workers: 8
       shuffle: True
 
@@ -63,7 +60,7 @@ criterion:
     args:
       window_size: 11
       size_average: True
-  L2:
+  MSE:
     name: torch.nn - MSELoss
     args:
       reduction: mean

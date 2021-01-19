@@ -1,3 +1,4 @@
+import sys
 from functools import partial
 
 import kornia
@@ -7,7 +8,7 @@ import torch.nn.functional as F
 
 
 use_cuda = torch.cuda.is_available()
-device = torch.device("cuda" if use_cuda else "cpu")
+device = torch.device("cuda:0" if use_cuda else "cpu")
 
 
 # Define Prewitt operator:
@@ -27,7 +28,8 @@ class Prewitt(nn.Module):
         x = self.filter(img)
         x = torch.mul(x, x)
         x = torch.sum(x, dim=1, keepdim=True)
-        x = torch.sqrt(x)
+        # x = torch.sqrt(x)
+        x = torch.sqrt(x + sys.float_info.epsilon)
         return x
 
 

@@ -1,5 +1,6 @@
 import math
 import os
+import random
 from typing import List, Tuple
 
 import matplotlib.pyplot as plt
@@ -31,17 +32,21 @@ class Runner(BaseRunner):
 
     def _train(self, epoch: int) -> None:
 
-        self.model.eval()
+        self.model.train()
         ep_loss: List[float] = []
-        for _, mb_img, _ in self.dataloader_dict["train"]:
+        for i, (p, mb_img, _) in enumerate(self.dataloader_dict["train"]):
 
-            mb_img = mb_img.float().to(self.cfg.params.device)
-            mb_reconst = self._reconstruct(mb_img)
+            self.optimizer.zero_grad()
 
+            mb_img = mb_img.to(self.cfg.params.device)
+            cutout_size = random.choice(self.cfg.params.cutout_sizes)
+            mb_reconst = self._reconstruct(mb_img, cutout_size)
+
+            mse_loss = self.criterion_dict["MSE"](mb_img, mb_reconst)
             msgms_loss = self.criterion_dict["MSGMS"](mb_img, mb_reconst)
             ssim_loss = self.criterion_dict["SSIM"](mb_img, mb_reconst)
-            l2_loss = self.criterion_dict["L2"](mb_img, mb_reconst)
-            mb_loss = msgms_loss + ssim_loss + l2_loss
+            mb_loss = msgms_loss + ssim_loss + mse_loss
+            print(i, mb_loss)
 
             mb_loss.backward()
             ep_loss.append(mb_loss.detach().cpu().item())
@@ -60,31 +65,25 @@ class Runner(BaseRunner):
         msgms_score = MSGMS_Score()
         for mb_img_path, mb_img, mb_gt in self.dataloader_dict["val"]:
 
+            mb_score = 0
             with torch.no_grad():
-                mb_img = mb_img.float().to(self.cfg.params.device)
-                mb_reconst = self._reconstruct(mb_img)
+                for cutout_size in self.cfg.params.cutout_sizes:
+                    mb_img = mb_img.to(self.cfg.params.device)
+                    mb_reconst = self._reconstruct(mb_img, cutout_size)
+                    mb_score += msgms_score(mb_img, mb_reconst)
 
-            msgms_loss = self.criterion_dict["MSGMS"](mb_img, mb_reconst)
-            ssim_loss = self.criterion_dict["SSIM"](mb_img, mb_reconst)
-            l2_loss = self.criterion_dict["L2"](mb_img, mb_reconst)
-            mb_loss = msgms_loss + ssim_loss + l2_loss
-
-            mb_score = msgms_score(mb_img, mb_reconst)
             mb_score = mb_score.squeeze().cpu().numpy()
             mb_score = gaussian_filter(mb_score, sigma=7)
+            ep_score.extend(mb_score)
 
             ep_img.extend(mb_img.permute(0, 2, 3, 1).detach().cpu().numpy())
             ep_reconst.extend(mb_reconst.permute(0, 2, 3, 1).detach().cpu().numpy())
             ep_gt.extend(mb_gt.detach().cpu().numpy())
 
-            ep_loss.append(mb_loss.detach().cpu().item())
-            ep_score.extend(mb_score)
-
         ep_score = np.array(ep_score)
         ep_score = (ep_score - ep_score.min()) / (ep_score.max() - ep_score.min())
         auroc = compute_auroc(epoch, np.array(ep_score), np.array(ep_gt))
 
-        mlflow.log_metric("Validation Loss", sum(ep_loss) / len(ep_loss), step=epoch)
         mlflow.log_metric("AUROC", auroc, step=epoch)
 
         self._savefig(epoch, ep_img, ep_reconst, ep_score, ep_gt)
@@ -93,20 +92,19 @@ class Runner(BaseRunner):
 
         pass
 
-    def _reconstruct(self, mb_img: Tensor) -> Tensor:
+    def _reconstruct(self, mb_img: Tensor, cutout_size: int) -> Tensor:
 
         _, _, h, w = mb_img.shape
-        cutout_size = self.cfg.params.cutout_size
         num_disjoint_masks = self.cfg.params.num_disjoint_masks
         disjoint_masks = self._create_disjoint_masks((h, w), cutout_size, num_disjoint_masks)
 
-        mb_reconst = torch.zeros(mb_img.shape).to(self.cfg.params.device)
+        mb_reconst = []
         for mask in disjoint_masks:
             mb_cutout = mb_img * mask
             mb_inpaint = self.model(mb_cutout)
-            mb_reconst += mb_inpaint * (1 - mask)
+            mb_reconst.append(mb_inpaint * (1 - mask))
 
-        return mb_reconst
+        return sum(mb_reconst)
 
     def _create_disjoint_masks(
         self,
