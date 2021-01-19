@@ -3,7 +3,7 @@ params:
   device: cuda:0
   cutout_sizes: [2, 4, 8, 16]
   num_disjoint_masks: 3
-  category: zipper
+  category: bottle
 
 model:
   name: riad.models - UNet
@@ -41,7 +41,7 @@ dataloader:
   val:
     name: torch.utils.data - DataLoader
     args:
-      batch_size: 4
+      batch_size: 8
       num_workers: 8
       shuffle: True
 
@@ -56,7 +56,7 @@ criterion:
     name: riad.criterions - MSGMS_Loss
     args:
   SSIM:
-    name: riad.criterions - SSIM_Loss
+    name: riad.criterions - SSIMLoss
     args:
       window_size: 11
       size_average: True

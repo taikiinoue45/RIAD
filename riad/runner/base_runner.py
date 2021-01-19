@@ -16,13 +16,12 @@ class BaseRunner(ABC):
         super().__init__()
 
         self.cfg = cfg
-        self.preprocess_dict = {k: self._init_preprocess(k) for k in self.cfg.preprocess.keys()}
-        self.dataset_dict = {k: self._init_dataset(k) for k in self.cfg.dataset.keys()}
-        self.dataloader_dict = {k: self._init_dataloader(k) for k in self.cfg.dataloader.keys()}
+        self.preprocesses = {k: self._init_preprocess(k) for k in self.cfg.preprocess.keys()}
+        self.datasets = {k: self._init_dataset(k) for k in self.cfg.dataset.keys()}
+        self.dataloaders = {k: self._init_dataloader(k) for k in self.cfg.dataloader.keys()}
         self.model = self._init_model().to(self.cfg.params.device)
         self.optimizer = self._init_optimizer()
-        self.criterion_dict = {k: self._init_criterion(k) for k in self.cfg.criterion.keys()}
-        self.best_auroc = 0.0
+        self.criterions = {k: self._init_criterion(k) for k in self.cfg.criterion.keys()}
 
     def _init_preprocess(self, mode: str) -> Compose:
 
@@ -33,13 +32,13 @@ class BaseRunner(ABC):
 
         cfg = self.cfg.dataset[mode]
         attr = self._get_attr(cfg.name)
-        return attr(**cfg.get("args", {}), preprocess=self.preprocess_dict[mode])
+        return attr(**cfg.get("args", {}), preprocess=self.preprocesses[mode])
 
     def _init_dataloader(self, mode: str) -> DataLoader:
 
         cfg = self.cfg.dataloader[mode]
         attr = self._get_attr(cfg.name)
-        return attr(**cfg.get("args", {}), dataset=self.dataset_dict[mode])
+        return attr(**cfg.get("args", {}), dataset=self.datasets[mode])
 
     def _init_model(self) -> Module:
 
@@ -66,17 +65,12 @@ class BaseRunner(ABC):
         return getattr(module, attr_name)
 
     @abstractmethod
-    def run(self) -> None:
+    def _train(self, epoch: int) -> None:
 
         raise NotImplementedError()
 
     @abstractmethod
-    def _train(self) -> None:
-
-        raise NotImplementedError()
-
-    @abstractmethod
-    def _validate(self) -> None:
+    def _validate(self, epoch: int) -> None:
 
         raise NotImplementedError()
 

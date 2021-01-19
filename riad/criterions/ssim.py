@@ -1,105 +1,57 @@
-from functools import partial
-from math import exp
-
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
+from torch.nn import Module
 
 
-use_cuda = torch.cuda.is_available()
-device = torch.device("cuda:0" if use_cuda else "cpu")
+class SSIMLoss(Module):
+    def __init__(self, window_size: int = 11, window_sigma: float = 1.5) -> None:
 
-
-def gaussian(window_size, sigma):
-    gauss = torch.Tensor(
-        [exp(-((x - window_size // 2) ** 2) / float(2 * sigma ** 2)) for x in range(window_size)]
-    )
-    return gauss / gauss.sum()
-
-
-def create_window(window_size, channel):
-    _1D_window = gaussian(window_size, 1.5).unsqueeze(1)
-    _2D_window = _1D_window.mm(_1D_window.t()).float().unsqueeze(0).unsqueeze(0)
-    window = _2D_window.expand(channel, 1, window_size, window_size).contiguous()
-    return window
-
-
-def _ssim(img1, img2, window, window_size, channel, size_average=True):
-    mu1 = F.conv2d(img1, window, padding=window_size // 2, groups=channel)
-    mu2 = F.conv2d(img2, window, padding=window_size // 2, groups=channel)
-
-    mu1_sq = mu1.pow(2)
-    mu2_sq = mu2.pow(2)
-    mu1_mu2 = mu1 * mu2
-
-    sigma1_sq = F.conv2d(img1 * img1, window, padding=window_size // 2, groups=channel) - mu1_sq
-    sigma2_sq = F.conv2d(img2 * img2, window, padding=window_size // 2, groups=channel) - mu2_sq
-    sigma12 = F.conv2d(img1 * img2, window, padding=window_size // 2, groups=channel) - mu1_mu2
-
-    C1 = 0.01 ** 2
-    C2 = 0.03 ** 2
-
-    ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / (
-        (mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2)
-    )
-
-    if size_average:
-        return ssim_map.mean()
-    else:
-        return ssim_map.mean(1).mean(1).mean(1)
-
-
-class SSIM(torch.nn.Module):
-    def __init__(self, window_size=11, size_average=True):
-        """window_size default is 11, size_average is True"""
-        super(SSIM, self).__init__()
         self.window_size = window_size
-        self.size_average = size_average
-        self.channel = 1
-        self.window = create_window(window_size, self.channel)
+        self.window_sigma = window_sigma
+        self.window = self._create_gaussian_window(self.windown_size, self.windown_sigma)
 
-    def forward(self, img1, img2):
-        (_, channel, _, _) = img1.size()
+    def forward(self, img1: Tensor, img2: Tensor, is_inference: bool = False) -> Tensor:
 
-        if channel == self.channel and self.window.data.type() == img1.data.type():
-            window = self.window
+        if not self.window.is_cuda():
+            self.window = self.window.to(img1.get_device())
+
+        ssim_map = self._ssim(img1, img2)
+
+        if is_inference:
+            return ssim_map
         else:
-            window = create_window(self.window_size, channel)
+            return ssim_map.mean()
 
-            if img1.is_cuda:
-                window = window.cuda(img1.get_device())
-            window = window.type_as(img1)
-
-            self.window = window
-            self.channel = channel
-
-        return _ssim(img1, img2, window, self.window_size, channel, self.size_average)
+    def _ssim(self, img1: Tensor, img2: Tensor) -> Tensor:
 
 
-def ssim(img1, img2, window_size=11, size_average=True):
-    (_, channel, _, _) = img1.size()
-    window = create_window(window_size, channel)
+        mu1 = F.conv2d(img1, self.window, padding=self.window_size // 2, groups=channel)
+        mu2 = F.conv2d(img2, self.window, padding=self.window_size // 2, groups=channel)
+        mu1_sq = mu1.pow(2)
+        mu2_sq = mu2.pow(2)
+        mu1_mu2 = mu1 * mu2
 
-    if img1.is_cuda:
-        window = window.cuda(img1.get_device())
-    window = window.type_as(img1)
+        sigma1 = F.conv2d(img1 - mu1, window, padding=window_size // 2, groups=channel)
+        sigma2 = F.conv2d(img2 - mu2, window, padding=window_size // 2, groups=channel)
+        sigma1_sq = sigma1.pow(2)
+        sigma2_sq = sigma2.pow(2)
+        sigma12 = sigma1 * sigma2
 
-    return _ssim(img1, img2, window, window_size, channel, size_average)
+        c1 = 0.01 ** 2
+        c2 = 0.03 ** 2
+        numerator = (2 * mu1_mu2 + c1) * (2 * sigma12 + c2)
+        denominator = (mu1_sq + mu2_sq + c1) * (sigma1_sq + sigma2_sq + c2)
+        ssim_map = numerator / denominator
+        return ssim_map.mean()
 
+    def _create_gaussian_window(window_size: int, sigma: float) -> Tensor:
 
-class SSIM_Loss(nn.Module):
-    def __init__(self, window_size=11, channel=3, size_average=True):
-        super().__init__()
-        window = create_window(window_size, channel)
-        self.ssim = partial(
-            _ssim,
-            window=window.to(device),
-            window_size=window_size,
-            channel=channel,
-            size_average=size_average,
-        )
+        k = torch.arange(kernel_size).to(dtype=torch.float32)
+        k -= (kernel_size - 1) / 2.0
 
-    def forward(self, Ii, Ir):
-        ssim_loss = 1 - self.ssim(Ii, Ir)
+        g = coords ** 2
+        g = (-(g.unsqueeze(0) + g.unsqueeze(1)) / (2 * sigma ** 2)).exp()
 
-        return ssim_loss
+        g /= g.sum()
+        return g.unsqueeze(0)

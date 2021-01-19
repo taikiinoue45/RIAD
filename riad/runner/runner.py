@@ -1,15 +1,16 @@
 import math
 import os
 import random
-from typing import List, Tuple
+from statistics import mean
+from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
 import torch
+from kornia import gaussian_blur2d
 from mpl_toolkits.axes_grid1 import ImageGrid
 from numpy import ndarray as NDArray
-from scipy.ndimage import gaussian_filter
 from torch import Tensor
 from tqdm import tqdm
 
@@ -32,12 +33,14 @@ class Runner(BaseRunner):
 
     def _train(self, epoch: int) -> None:
 
+        metrics: Dict[str, List[float]] = {
+            "MSE Loss": [],
+            "MSGMS Loss": [],
+            "SSIM Loss": [],
+            "Total Loss": [],
+        }
         self.model.train()
-        ep_mse: List[float] = []
-        ep_msgms: List[float] = []
-        ep_ssim: List[float] = []
-        ep_loss: List[float] = []
-        for i, (p, mb_img, _) in enumerate(self.dataloader_dict["train"]):
+        for _, mb_img, _ in self.dataloaders["train"]:
 
             self.optimizer.zero_grad()
 
@@ -45,55 +48,59 @@ class Runner(BaseRunner):
             cutout_size = random.choice(self.cfg.params.cutout_sizes)
             mb_reconst = self._reconstruct(mb_img, cutout_size)
 
-            mb_mse = self.criterion_dict["MSE"](mb_img, mb_reconst)
-            mb_msgms = self.criterion_dict["MSGMS"](mb_img, mb_reconst)
-            mb_ssim = self.criterion_dict["SSIM"](mb_img, mb_reconst)
-            mb_loss = mb_msgms + mb_ssim + mb_mse
-            print(i, mb_loss)
-
-            mb_loss.backward()
-            ep_mse.append(mb_mse.detach().cpu().item())
-            ep_msgms.append(mb_msgms.detach().cpu().item())
-            ep_ssim.append(mb_ssim.detach().cpu().item())
-            ep_loss.append(mb_loss.detach().cpu().item())
+            mb_mse = self.criterions["MSE"](mb_img, mb_reconst)
+            mb_msgms = self.criterions["MSGMS"](mb_img, mb_reconst)
+            mb_ssim = self.criterions["SSIM"](mb_img, mb_reconst)
+            mb_total = mb_msgms + mb_ssim + mb_mse
+            mb_total.backward()
             self.optimizer.step()
 
-        mlflow.log_metric("Train Loss", sum(ep_loss) / len(ep_loss), step=epoch)
+            metrics["MSE Loss"].append(mb_mse.detach().cpu().item())
+            metrics["MSGMS Loss"].append(mb_msgms.detach().cpu().item())
+            metrics["SSIM Loss"].append(mb_ssim.detach().cpu().item())
+            metrics["Total Loss"].append(mb_total.detach().cpu().item())
+
+        mlflow.log_metrics({k: mean(v) for k, v in metrics.items()}, step=epoch)
 
     def _validate(self, epoch: int) -> None:
 
         self.model.eval()
-        ep_img: List[NDArray] = []
-        ep_reconst: List[NDArray] = []
-        ep_gt: List[NDArray] = []
-        ep_score: List[NDArray] = []
-        ep_loss: List[float] = []
+        artifacts: Dict[str, List[NDArray]] = {
+            "img": [],
+            "reconst": [],
+            "gt": [],
+            "amap": [],
+        }
         msgms_score = MSGMS_Score()
-        for mb_img_path, mb_img, mb_gt in self.dataloader_dict["val"]:
+        for mb_img_path, mb_img, mb_gt in self.dataloaders["val"]:
 
-            mb_score = 0
+            mb_amap = 0
             with torch.no_grad():
                 for cutout_size in self.cfg.params.cutout_sizes:
                     mb_img = mb_img.to(self.cfg.params.device)
                     mb_reconst = self._reconstruct(mb_img, cutout_size)
-                    mb_score += msgms_score(mb_img, mb_reconst) / (256 ** 2)
+                    mb_amap += msgms_score(mb_img, mb_reconst) / (256 ** 2)
 
-            mb_score = mb_score.squeeze().cpu().numpy()
-            for i in range(len(mb_score)):
-                mb_score[i] = gaussian_filter(mb_score[i], sigma=7)
-            ep_score.extend(mb_score)
+            mb_amap = gaussian_blur2d(mb_amap, kernel_size=(3, 3), sigma=(7.0, 7.0))
+            artifacts["amap"].extend(mb_amap.squeeze().detach().cpu().numpy())
+            artifacts["img"].extend(mb_img.permute(0, 2, 3, 1).detach().cpu().numpy())
+            artifacts["reconst"].extend(mb_reconst.permute(0, 2, 3, 1).detach().cpu().numpy())
+            artifacts["gt"].extend(mb_gt.detach().cpu().numpy())
 
-            ep_img.extend(mb_img.permute(0, 2, 3, 1).detach().cpu().numpy())
-            ep_reconst.extend(mb_reconst.permute(0, 2, 3, 1).detach().cpu().numpy())
-            ep_gt.extend(mb_gt.detach().cpu().numpy())
+        ep_amap = np.array(artifacts["amap"])
+        ep_amap = (ep_amap - ep_amap.min()) / (ep_amap.max() - ep_amap.min())
+        artifacts["amap"] = list(ep_amap)
 
-        ep_score = np.array(ep_score)
-        ep_score = (ep_score - ep_score.min()) / (ep_score.max() - ep_score.min())
-        auroc = compute_auroc(epoch, np.array(ep_score), np.array(ep_gt))
-
+        auroc = compute_auroc(epoch, np.array(artifacts["amap"]), np.array(artifacts["gt"]))
         mlflow.log_metric("AUROC", auroc, step=epoch)
 
-        self._savefig(epoch, ep_img, ep_reconst, ep_score, ep_gt)
+        self._savefig(
+            epoch,
+            artifacts["img"],
+            artifacts["reconst"],
+            artifacts["amap"],
+            artifacts["gt"],
+        )
 
     def _test(self) -> None:
 
@@ -105,13 +112,13 @@ class Runner(BaseRunner):
         num_disjoint_masks = self.cfg.params.num_disjoint_masks
         disjoint_masks = self._create_disjoint_masks((h, w), cutout_size, num_disjoint_masks)
 
-        mb_reconst = []
+        mb_reconst = 0
         for mask in disjoint_masks:
             mb_cutout = mb_img * mask
             mb_inpaint = self.model(mb_cutout)
-            mb_reconst.append(mb_inpaint * (1 - mask))
+            mb_reconst += mb_inpaint * (1 - mask)
 
-        return sum(mb_reconst)
+        return mb_reconst
 
     def _create_disjoint_masks(
         self,
@@ -141,11 +148,11 @@ class Runner(BaseRunner):
         epoch: int,
         ep_img: List[NDArray],
         ep_reconst: List[NDArray],
-        ep_score: List[NDArray],
+        ep_amap: List[NDArray],
         ep_gt: List[NDArray],
     ) -> None:
 
-        for i, (img, reconst, score, gt) in enumerate(zip(ep_img, ep_reconst, ep_score, ep_gt)):
+        for i, (img, reconst, score, gt) in enumerate(zip(ep_img, ep_reconst, ep_amap, ep_gt)):
 
             # How to get two subplots to share the same y-axis with a single colorbar
             # https://stackoverflow.com/a/38940369
