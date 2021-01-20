@@ -1,5 +1,5 @@
 params:
-  epochs: 200
+  epochs: 50
   device: cuda:0
   cutout_sizes: [2, 4, 8, 16]
   num_disjoint_masks: 3
@@ -53,13 +53,14 @@ optimizer:
 
 criterion:
   MSGMS:
-    name: riad.criterions - MSGMS_Loss
+    name: riad.criterions - MSGMSLoss
     args:
+      num_scales: 4
   SSIM:
     name: riad.criterions - SSIMLoss
     args:
-      window_size: 11
-      size_average: True
+      kernel_size: 11
+      sigma: 1.5
   MSE:
     name: torch.nn - MSELoss
     args:

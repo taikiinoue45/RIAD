@@ -1,9 +1,8 @@
-from .gms import MSGMS_Loss, MSGMS_Score
+from .msgms import MSGMSLoss
 from .ssim import SSIMLoss
 
 
 __all__ = [
-    "MSGMS_Loss",
-    "MSGMS_Score",
+    "MSGMSLoss",
     "SSIMLoss",
 ]

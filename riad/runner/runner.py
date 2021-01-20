@@ -14,7 +14,6 @@ from numpy import ndarray as NDArray
 from torch import Tensor
 from tqdm import tqdm
 
-from riad.criterions import MSGMS_Score
 from riad.metrics import compute_auroc
 from riad.runner import BaseRunner
 
@@ -71,7 +70,6 @@ class Runner(BaseRunner):
             "gt": [],
             "amap": [],
         }
-        msgms_score = MSGMS_Score()
         for mb_img_path, mb_img, mb_gt in self.dataloaders["val"]:
 
             mb_amap = 0
@@ -79,7 +77,7 @@ class Runner(BaseRunner):
                 for cutout_size in self.cfg.params.cutout_sizes:
                     mb_img = mb_img.to(self.cfg.params.device)
                     mb_reconst = self._reconstruct(mb_img, cutout_size)
-                    mb_amap += msgms_score(mb_img, mb_reconst) / (256 ** 2)
+                    mb_amap += self.criterions["MSGMS"](mb_img, mb_reconst, as_loss=False)
 
             mb_amap = gaussian_blur2d(mb_amap, kernel_size=(3, 3), sigma=(7.0, 7.0))
             artifacts["amap"].extend(mb_amap.squeeze().detach().cpu().numpy())

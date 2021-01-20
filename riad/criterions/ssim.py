@@ -12,13 +12,17 @@ class SSIMLoss(Module):
         self.sigma = sigma
         self.gaussian_kernel = self._create_gaussian_kernel(self.kernel_size, self.sigma)
 
-    def forward(self, x: Tensor, y: Tensor) -> Tensor:
+    def forward(self, x: Tensor, y: Tensor, as_loss: bool = True) -> Tensor:
 
         if not self.gaussian_kernel.is_cuda:
-            self.gaussian_kernel = self.gaussian_kernel.to(f"cuda:{x.get_device()}")
+            self.gaussian_kernel = self.gaussian_kernel.to(x.device)
 
         ssim_map = self._ssim(x, y)
-        return 1 - ssim_map.mean()
+
+        if as_loss:
+            return 1 - ssim_map.mean()
+        else:
+            return ssim_map
 
     def _ssim(self, x: Tensor, y: Tensor) -> Tensor:
 
