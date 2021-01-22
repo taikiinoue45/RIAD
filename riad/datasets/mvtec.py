@@ -4,10 +4,9 @@ from typing import List, Tuple, Union
 import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
+from albumentations import Compose
 from torch import Tensor
 from torch.utils.data import Dataset
-
-from riad.transforms import Compose
 
 
 class MVTecDataset(Dataset):
@@ -15,7 +14,7 @@ class MVTecDataset(Dataset):
         self,
         data_dir: Union[Path, str],
         query_list: List[str],
-        preprocess: Compose,
+        transforms: Compose,
         debug: bool,
     ) -> None:
 
@@ -23,18 +22,18 @@ class MVTecDataset(Dataset):
         Args:
             data_dir (Union[Path, str]): Path to directory with info.csv, images/ and masks/
             query_list (List[str]): Query list to extract arbitrary rows from info.csv
-            preprocess (Composite): List of transforms
-            debug (bool): If true, preprocessed images are saved
+            transforms (Composite): List of transforms
+            debug (bool): If true, transformsed images are saved
         """
 
         self.data_dir = Path(data_dir)
-        self.preprocess = preprocess
+        self.transforms = transforms
         self.debug = debug
 
         df = pd.read_csv(self.data_dir / "info.csv")
         self.stem_list = []
         for q in query_list:
-            self.stem_list += df.query(q)["stem"].to_list()
+            self.stem_list += df.query(q)["stem"].tolist()
 
     def __getitem__(self, index: int) -> Tuple[str, Tensor, Tensor]:
 
@@ -48,7 +47,7 @@ class MVTecDataset(Dataset):
         mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
         mask[mask != 0] = 1
 
-        data_dict = self.preprocess(image=img, mask=mask)
+        data_dict = self.transforms(image=img, mask=mask)
 
         if self.debug:
             self._save_transformed_images(index, data_dict["image"], data_dict["mask"])

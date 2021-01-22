@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 import hydra
@@ -18,8 +19,10 @@ sys.argv.pop(1)
 def main(cfg: DictConfig) -> None:
 
     mlflow.set_tracking_uri("databricks")
-    mlflow.set_experiment("/Users/inoue@nablas.com/riad")
-    mlflow.start_run(run_name=cfg.params.category)
+    mlflow.set_experiment(f"/Users/inoue@nablas.com/{cfg.params.experiment_name}")
+    mlflow.start_run(run_name=cfg.params.run_name)
+    mlflow.log_params(cfg.params)
+    mlflow.log_param("cwd", os.getcwd())
     mlflow.log_artifacts(".hydra", "hydra")
 
     runner = Runner(cfg)

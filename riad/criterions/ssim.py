@@ -7,6 +7,13 @@ from torch.nn import Module
 class SSIMLoss(Module):
     def __init__(self, kernel_size: int = 11, sigma: float = 1.5) -> None:
 
+        """Computes the structural similarity (SSIM) index map between two images
+
+        Args:
+            kernel_size (int): Height and width of the gaussian kernel.
+            sigma (float): Gaussian standard deviation in the x and y direction.
+        """
+
         super().__init__()
         self.kernel_size = kernel_size
         self.sigma = sigma

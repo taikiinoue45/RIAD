@@ -4,11 +4,13 @@ params:
   cutout_sizes: [2, 4, 8, 16]
   num_disjoint_masks: 3
   category: bottle
-  computer: metis
+  computer: dgx
   height: 256
   width: 256
   cross_validation: 0
-  batch_size: 4
+  batch_size: 16
+  experiment_name: riad_mvtec
+  run_name: ${params.category}
 
 model:
   name: riad.models - UNet
