@@ -1,5 +1,5 @@
 params:
-  epochs: 500
+  epochs: 300
   device: cuda:0
   cutout_sizes: [2, 4, 8, 16]
   num_disjoint_masks: 3
@@ -89,18 +89,21 @@ dataloaders:
     args:
       batch_size: ${params.batch_size}
       num_workers: ${params.batch_size}
+      pin_memory: True
       shuffle: True
   val:
     name: torch.utils.data - DataLoader
     args:
       batch_size: ${params.batch_size}
       num_workers: ${params.batch_size}
+      pin_memory: True
       shuffle: True
   test:
     name: torch.utils.data - DataLoader
     args:
       batch_size: ${params.batch_size}
       num_workers: ${params.batch_size}
+      pin_memory: True
       shuffle: True
 
 optimizer:
@@ -108,6 +111,14 @@ optimizer:
   args:
     lr: 0.0001
     weight_decay: 0.00001
+
+scheduler:
+  name: torch.optim.lr_scheduler - CosineAnnealingWarmRestarts
+  args:
+    T_0: 10
+    T_mult: 2
+    eta_min: 0.0001
+    last_epoch: -1
 
 criterions:
   MSGMS:
@@ -127,6 +138,6 @@ criterions:
 early_stopping:
   name: riad.utils - EarlyStopping
   args:
-    patience: 10
+    patience: 20
     delta: 0
 

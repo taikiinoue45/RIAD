@@ -6,13 +6,12 @@ from typing import Dict, List, Tuple
 import mlflow
 import numpy as np
 import torch
-from kornia import gaussian_blur2d
 from numpy import ndarray as NDArray
 from torch import Tensor
 
 from riad.metrics import compute_auroc
 from riad.runner import BaseRunner
-from riad.utils import savefig
+from riad.utils import mean_smoothing, savefig
 
 
 class Runner(BaseRunner):
@@ -94,7 +93,7 @@ class Runner(BaseRunner):
                     mb_reconst = self._reconstruct(mb_img, cutout_size)
                     mb_amap += self.criterions["MSGMS"](mb_img, mb_reconst, as_loss=False)
 
-            mb_amap = gaussian_blur2d(mb_amap, kernel_size=(3, 3), sigma=(7.0, 7.0))
+            mb_amap = mean_smoothing(mb_amap)
             artifacts["amap"].extend(mb_amap.squeeze(1).detach().cpu().numpy())
             artifacts["img"].extend(mb_img.permute(0, 2, 3, 1).detach().cpu().numpy())
             artifacts["reconst"].extend(mb_reconst.permute(0, 2, 3, 1).detach().cpu().numpy())
@@ -107,7 +106,7 @@ class Runner(BaseRunner):
         auroc = compute_auroc(epoch, np.array(artifacts["amap"]), np.array(artifacts["gt"]))
         mlflow.log_metric("AUROC", auroc, step=epoch)
 
-        savefig(epoch, artifacts["img"], artifacts["reconst"], artifacts["amap"], artifacts["gt"])
+        savefig(epoch, artifacts["img"], artifacts["reconst"], artifacts["gt"], artifacts["amap"])
 
     def _reconstruct(self, mb_img: Tensor, cutout_size: int) -> Tensor:
 
