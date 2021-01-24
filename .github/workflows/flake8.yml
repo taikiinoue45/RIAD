@@ -3,7 +3,7 @@ name: flake8
 on:
   push:
     branches:
-      - master
+      - main
   pull_request: {}
 
 jobs:
