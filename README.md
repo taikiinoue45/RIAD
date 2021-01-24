@@ -27,6 +27,80 @@ PyTorch re-implementation of [Reconstruction by Inpainting for Visual Anomaly De
 
 ## 2. Graphical Results
 
+### zipper
+<p align="left">
+  <img src=assets/zipper.gif width="100%" />
+</p>
+
+### wood
+<p align="left">
+  <img src=assets/wood.gif width="100%" />
+</p>
+
+### transistor
+<p align="left">
+  <img src=assets/transistor.gif width="100%" />
+</p>
+
+### toothbrush
+<p align="left">
+  <img src=assets/toothbrush.gif width="100%" />
+</p>
+
+### tile
+<p align="left">
+  <img src=assets/tile.gif width="100%" />
+</p>
+
+### screw
+<p align="left">
+  <img src=assets/screw.gif width="100%" />
+</p>
+
+### pill
+<p align="left">
+  <img src=assets/pill.gif width="100%" />
+</p>
+
+### metal_nut
+<p align="left">
+  <img src=assets/metal_nut.gif width="100%" />
+</p>
+
+### leather
+<p align="left">
+  <img src=assets/leather.gif width="100%" />
+</p>
+
+### hazelnut
+<p align="left">
+  <img src=assets/hazelnut.gif width="100%" />
+</p>
+
+### grid
+<p align="left">
+  <img src=assets/grid.gif width="100%" />
+</p>
+
+### carpet
+<p align="left">
+  <img src=assets/carpet.gif width="100%" />
+</p>
+
+### capsule
+<p align="left">
+  <img src=assets/capsule.gif width="100%" />
+</p>
+
+### cable
+<p align="left">
+  <img src=assets/cable.gif width="100%" />
+</p>
+
+### bottle
+<p align="left">
+  <img src=assets/bottle.gif width="100%" />
+</p>
 
 <br>
 
