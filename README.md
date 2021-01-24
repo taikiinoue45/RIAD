@@ -2,6 +2,12 @@
   <img src=assets/logo.svg width="70%" />
 </p>
 
+![black](https://github.com/taikiinoue45/RIAD/workflows/black/badge.svg)
+![blackdoc](https://github.com/taikiinoue45/RIAD/workflows/blackdoc/badge.svg)
+![flake8](https://github.com/taikiinoue45/RIAD/workflows/flake8/badge.svg)
+![isort](https://github.com/taikiinoue45/RIAD/workflows/isort/badge.svg)
+![mypy](https://github.com/taikiinoue45/RIAD/workflows/mypy/badge.svg)
+
 PyTorch re-implementation of [Reconstruction by Inpainting for Visual Anomaly Detection](https://www.sciencedirect.com/science/article/abs/pii/S0031320320305094)
 
 <br>
