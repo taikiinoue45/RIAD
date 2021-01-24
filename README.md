@@ -1,4 +1,7 @@
-# RIAD
+<p align="left">
+  <img src=assets/logo.svg width="70%" />
+</p>
+
 PyTorch re-implementation of [Reconstruction by Inpainting for Visual Anomaly Detection](https://www.sciencedirect.com/science/article/abs/pii/S0031320320305094)
 
 <br>
