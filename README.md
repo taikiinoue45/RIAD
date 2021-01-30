@@ -121,7 +121,7 @@ PyTorch re-implementation of [Reconstruction by Inpainting for Visual Anomaly De
 
 ## 4. Usage
 
-a) Download docker image and run container
+a) Download docker image and run docker container
 ```
 docker pull taikiinoue45/mvtec:riad
 docker run --runtime nvidia -it --workdir /app --network host taikiinoue45/mvtec:riad /usr/bin/zsh
