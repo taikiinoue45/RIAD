@@ -120,17 +120,18 @@ PyTorch re-implementation of [Reconstruction by Inpainting for Visual Anomaly De
 <br>
 
 ## 4. Usage (WIP)
-```
-git clone git@github.com:TaikiInoue/RIAD.git
-cd RIAD
-```
 
 ```
 docker pull taikiinoue45/mvtec:riad
 ```
 
 ```
-docker run --runtime nvidia -it --rm taikiinoue45/mvtec:riad /usr/bin/zsh
+docker run --runtime nvidia -it --rm --workdir /app taikiinoue45/mvtec:riad /usr/bin/zsh
+```
+
+```
+git clone https://github.com/taikiinoue45/RIAD.git
+cd /app/RIAD/riad
 ```
 
 ```

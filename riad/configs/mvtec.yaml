@@ -1,14 +1,15 @@
 params:
-  epochs: 500
+  epochs: 300
   device: cuda:0
   cutout_sizes: [2, 4, 8, 16]
   num_disjoint_masks: 3
   category: bottle
-  computer: metis
   height: 256
   width: 256
   cross_validation: 0
   batch_size: 4
+  experiment_name: mvtec
+  run_name: ${params.category}_cv${params.cross_validation}
 
 model:
   name: riad.models - UNet
@@ -62,21 +63,21 @@ datasets:
   train:
     name: riad.datasets - MVTecDataset
     args:
-      data_dir: /dgx/github/RIAD/data
+      data_dir: /app/RIAD/data
       query_list:
       - cv${params.cross_validation}=='train' & category=='${params.category}'
       debug: False
   val:
     name: riad.datasets - MVTecDataset
     args:
-      data_dir: /dgx/github/RIAD/data
+      data_dir: /app/RIAD/data
       query_list:
       - cv${params.cross_validation}=='val' & category=='${params.category}'
       debug: False
   test:
     name: riad.datasets - MVTecDataset
     args:
-      data_dir: /dgx/github/RIAD/data
+      data_dir: /app/RIAD/data
       query_list:
       - cv${params.cross_validation}=='test' & category=='${params.category}'
       debug: false
@@ -87,18 +88,21 @@ dataloaders:
     args:
       batch_size: ${params.batch_size}
       num_workers: ${params.batch_size}
+      pin_memory: True
       shuffle: True
   val:
     name: torch.utils.data - DataLoader
     args:
       batch_size: ${params.batch_size}
       num_workers: ${params.batch_size}
+      pin_memory: True
       shuffle: True
   test:
     name: torch.utils.data - DataLoader
     args:
       batch_size: ${params.batch_size}
       num_workers: ${params.batch_size}
+      pin_memory: True
       shuffle: True
 
 optimizer:
@@ -106,6 +110,14 @@ optimizer:
   args:
     lr: 0.0001
     weight_decay: 0.00001
+
+scheduler:
+  name: torch.optim.lr_scheduler - CosineAnnealingWarmRestarts
+  args:
+    T_0: 10
+    T_mult: 2
+    eta_min: 0.0001
+    last_epoch: -1
 
 criterions:
   MSGMS:
@@ -125,6 +137,5 @@ criterions:
 early_stopping:
   name: riad.utils - EarlyStopping
   args:
-    patience: 10
+    patience: 20
     delta: 0
-
