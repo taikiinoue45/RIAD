@@ -84,7 +84,7 @@ class Runner(BaseRunner):
             "gt": [],
             "amap": [],
         }
-        for mb_img_path, mb_img, mb_gt in self.dataloaders["test"]:
+        for _, mb_img, mb_gt in self.dataloaders["test"]:
 
             mb_amap = 0
             with torch.no_grad():
