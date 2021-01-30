@@ -119,14 +119,14 @@ PyTorch re-implementation of [Reconstruction by Inpainting for Visual Anomaly De
 
 <br>
 
-## 4. Usage (WIP)
+## 4. Usage
 
 ```
 docker pull taikiinoue45/mvtec:riad
 ```
 
 ```
-docker run --runtime nvidia -it --rm --workdir /app taikiinoue45/mvtec:riad /usr/bin/zsh
+docker run --runtime nvidia -it --workdir /app --network host taikiinoue45/mvtec:riad /usr/bin/zsh
 ```
 
 ```
