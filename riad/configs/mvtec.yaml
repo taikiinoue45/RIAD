@@ -63,21 +63,21 @@ datasets:
   train:
     name: riad.datasets - MVTecDataset
     args:
-      data_dir: /app/RIAD/data
+      data_dir: /data
       query_list:
       - cv${params.cross_validation}=='train' & category=='${params.category}'
       debug: False
   val:
     name: riad.datasets - MVTecDataset
     args:
-      data_dir: /app/RIAD/data
+      data_dir: /data
       query_list:
       - cv${params.cross_validation}=='val' & category=='${params.category}'
       debug: False
   test:
     name: riad.datasets - MVTecDataset
     args:
-      data_dir: /app/RIAD/data
+      data_dir: /data
       query_list:
       - cv${params.cross_validation}=='test' & category=='${params.category}'
       debug: false
